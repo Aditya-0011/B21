@@ -203,4 +203,4 @@ Log entries include:
 
 ## Author
 
-[Aditya](https/adityapunmiya.com)
+[Aditya](https://adityapunmiya.com)
