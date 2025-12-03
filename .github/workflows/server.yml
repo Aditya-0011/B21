@@ -22,7 +22,7 @@ jobs:
 
       - name: Build Proxy Server
         run: |
-          GOOS=linux GOARCH=arm64 go build -o proxy main.go
+          GOOS=linux GOARCH=arm64 go build -ldflags "-s -w" -o b21 main.go
 
       - name: Copy server to VM
         if: success()
@@ -32,8 +32,8 @@ jobs:
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_KEY }}
           port: 22
-          source: "./proxy"
-          target: "~/proxy"
+          source: "./b21"
+          target: "~/b21"
 
       - name: Server Setup
         uses: appleboy/ssh-action@master
@@ -43,5 +43,5 @@ jobs:
           key: ${{ secrets.VM_KEY }}
           port: 22
           script: |
-            cd ~/proxy
+            cd ~/b21
             ./move.sh

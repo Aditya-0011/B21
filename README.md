@@ -1,14 +1,21 @@
-# Proxy Server with TOTP Authentication
+# **Project B21 (Stealth Relay)**
 
-A secure HTTP proxy server written in Go that allows authenticated file downloads through a proxy endpoint. The server uses Time-based One-Time Password (TOTP) authentication to ensure only authorized users can access the proxy functionality.
+**A lightweight, zero-dependency artifact relay service designed for high-security environments.**
 
-## Features
+## **About**
 
-- **TOTP Authentication**: Secure access control using time-based one-time passwords
-- **Proxy Downloads**: Download files from any URL through the proxy server
-- **Request Logging**: All requests and operations are logged with timestamps
-- **Log Access**: Retrieve server logs through authenticated endpoint
-- **Thread-Safe Logging**: Concurrent-safe logging with mutex protection
+**Project B21** is a secure, authenticated streaming relay written in Go. It allows for the retrieval of external artifacts (updates, binaries, patches) into restrictive network environments where direct access to third-party domains is blocked or unstable.
+
+Unlike standard proxies, B21 does not expose a full internet gateway. Instead, it creates a **single-purpose, verified tunnel** for authorized file transfers using strict "Defense in Depth" mechanisms. Its primary design goal is **stealth** and **minimal footprint**.
+
+### **Key Features**
+
+* **TOTP Authentication:** Zero-trust access control using Time-based One-Time Passwords (RFC 6238).  
+* **Streaming Proxy:** Downloads files from any URL using efficient io.Reader/Writer pipes (constant low RAM usage).  
+* **Stealth Operations:** Designed to blend into background traffic via header manipulation and benign subdomains.  
+* **Audit Logging:** Comprehensive request logging with timestamping and IP tracking.  
+* **Thread-Safe:** Concurrent-safe logging with mutex protection for reliability under load.  
+* **Zero Dependencies:** Compiles into a single, static binary.
 
 ## Project Structure
 
@@ -38,7 +45,7 @@ A secure HTTP proxy server written in Go that allows authenticated file download
 
    ```bash
    git clone <repository-url>
-   cd proxy-server
+   cd b21
    ```
 
 2. Install dependencies:
@@ -114,13 +121,13 @@ A secure HTTP proxy server written in Go that allows authenticated file download
   - Bash/macOS/Linux:
 
     ```bash
-    GOOS=linux GOARCH=arm64 go build -o proxy main.go
+    GOOS=linux GOARCH=arm64 go build -ldflags "-s -w" -o b21 main.go
     ```
 
   - Windows PowerShell:
 
     ```powershell
-    $env:GOOS="linux"; $env:GOARCH="arm64"; go build -o proxy main.go
+    $env:GOOS="linux"; $env:GOARCH="arm64"; go build -ldflags "-s -w" -o b21 main.go
     ```
 
 - Key generator binary:
@@ -151,8 +158,8 @@ The server will start on port `7000` by default (configurable via `PORT`).
 
 If you've built the server binary, run it directly:
 
-- Linux/macOS: `./proxy`
-- Windows: `.\proxy.exe`
+- Linux/macOS: `./b21`
+- Windows: `.\b21.exe`
 
 ### API Endpoints
 
@@ -166,7 +173,7 @@ If you've built the server binary, run it directly:
 
 ```json
 {
-  "url": "https://example.com/file.zip",
+  "url": "https://example-2.com/file.zip",
   "otp": "123456"
 }
 ```
@@ -176,9 +183,9 @@ If you've built the server binary, run it directly:
 **Example**:
 
 ```bash
-curl -X POST http://localhost:6000/ \
+curl -X POST https://example.com/ \
   -H "Content-Type: application/json" \
-  -d '{"url":"https://example.com/file.zip","otp":"123456"}'
+  -d '{"url":"https://example-2.com/file.zip","otp":"123456"}'
 ```
 
 #### 2. Retrieve Server Logs
@@ -200,7 +207,7 @@ curl -X POST http://localhost:6000/ \
 **Example**:
 
 ```bash
-curl -X POST http://localhost:6000/logs \
+curl -X POST https://example.com/logs \
   -H "Content-Type: application/json" \
   -d '{"otp":"123456"}' \
   --output logs.txt
@@ -208,9 +215,10 @@ curl -X POST http://localhost:6000/logs \
 
 ## Security
 
-- **TOTP Authentication**: All endpoints require a valid TOTP code generated from your authenticator app
-- **Request Logging**: All authentication attempts and operations are logged
-- **Thread-Safe Operations**: Log file access is protected with mutexes to prevent corruption
+1. **Authentication:** Every request is validated against the `TOTP_SECRET`. No public access is allowed.  
+2. **Concurrency:** Log files are protected by Mutex locks to prevent race conditions during high-traffic or simultaneous log exports.  
+3. **Minimal Surface:** Only POST requests are accepted. No query parameters or complex headers are parsed.  
+4. **Snapshot Logging:** Log exports are generated via atomic snapshots to prevent server blocking during large log downloads.
 
 ## Configuration
 
@@ -263,3 +271,9 @@ Log entries include:
 ## Deployment
 
 Deployment and CI/CD are environment-specific. Use the build commands above within your own pipeline or tooling appropriate for your infrastructure.
+
+## Roadmap
+
+* [ ] **End-to-End Encryption:** Implement encrypted tunneling (AES) between client and server to bypass Deep Packet Inspection (DPI).  
+* [ ] **Client CLI:** A dedicated Go CLI tool to handle decryption and automated downloads.
+

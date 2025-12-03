@@ -33,4 +33,4 @@ jobs:
           key: ${{ secrets.VM_KEY }}
           port: 22
           source: "./keygen"
-          target: "~/proxy"
+          target: "~/b21"

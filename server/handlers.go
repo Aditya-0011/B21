@@ -57,9 +57,9 @@ func (c *Controller) GetData(w http.ResponseWriter, r *http.Request) {
 	}
 	defer resp.Body.Close()
 
-	w.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
+	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Content-Length", resp.Header.Get("Content-Length"))
-	w.Header().Set("Content-Disposition", "attachment; filename=downloaded_file")
+	w.Header().Set("Content-Disposition", "attachment; filename=resource.dat")
 
 	n, err := io.Copy(w, resp.Body)
 	if err != nil {
