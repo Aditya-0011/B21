@@ -13,9 +13,9 @@ A secure HTTP proxy server written in Go that allows authenticated file download
 ## Project Structure
 
 ```
-proxy-server/
+.
 ├── cmd/
-│   └── genkey.go          # TOTP key and QR code generator
+│   └── keygen.go          # TOTP key and QR code generator
 ├── server/
 │   └── handlers.go        # HTTP request handlers
 ├── totp/
@@ -47,23 +47,31 @@ proxy-server/
    go mod download
    ```
 
-3. Configure the key generator (optional):
+3. Configure the key generator:
 
-   Edit `cmd/genkey.go` to customize the TOTP credentials:
+   You can customize the TOTP metadata via environment variables (used by `cmd/keygen.go`):
 
-   ```go
-   const (
-       issuer      = "Server"        // Change to your server/service name
-       accountName = "John Doe"      // Change to your account identifier
-   )
-   ```
+   - `ISSUER`: Server/service name (default: `Server`)
+   - `ACCOUNT_NAME`: Account identifier (default: `Admin`)
 
-   These values will appear in your authenticator app to identify this TOTP entry.
+   Examples:
+
+   - Windows PowerShell
+
+     ```powershell
+     $env:ISSUER="MyProxy"; $env:ACCOUNT_NAME="admin@example.com"; go run .\cmd\keygen.go
+     ```
+
+   - Linux/macOS
+
+     ```bash
+     ISSUER="MyProxy" ACCOUNT_NAME="admin@example.com" go run ./cmd/keygen.go
+     ```
 
 4. Generate TOTP secret and QR code:
 
    ```bash
-   go run cmd/genkey.go
+   go run cmd/keygen.go
    ```
 
    This will generate:
@@ -71,6 +79,11 @@ proxy-server/
    - A TOTP secret key (save this as an environment variable)
    - An ASCII QR code printed in the terminal (you can scan it directly)
    - A QR code image (`code.png`) that can be scanned with an authenticator app
+
+   If you've already built the key generator binary, run it directly:
+
+   - Linux/macOS: `./keygen`
+   - Windows: `.\keygen.exe`
 
 5. Set up your authenticator app:
 
@@ -94,6 +107,38 @@ proxy-server/
 
 ## Usage
 
+### Build
+
+- Server binary:
+
+  - Bash/macOS/Linux:
+
+    ```bash
+    GOOS=linux GOARCH=arm64 go build -o proxy main.go
+    ```
+
+  - Windows PowerShell:
+
+    ```powershell
+    $env:GOOS="linux"; $env:GOARCH="arm64"; go build -o proxy main.go
+    ```
+
+- Key generator binary:
+
+  - Bash/macOS/Linux:
+
+    ```bash
+    GOOS=linux GOARCH=arm64 go build -o keygen ./cmd/keygen.go
+    ```
+
+  - Windows PowerShell:
+
+    ```powershell
+    $env:GOOS="linux"; $env:GOARCH="arm64"; go build -o keygen ./cmd/keygen.go
+    ```
+
+Note: Adjust `GOOS`/`GOARCH` for your target platform as needed.
+
 ### Starting the Server
 
 Run the server:
@@ -102,7 +147,12 @@ Run the server:
 go run main.go
 ```
 
-The server will start on port `6000` by default.
+The server will start on port `7000` by default (configurable via `PORT`).
+
+If you've built the server binary, run it directly:
+
+- Linux/macOS: `./proxy`
+- Windows: `.\proxy.exe`
 
 ### API Endpoints
 
@@ -164,10 +214,13 @@ curl -X POST http://localhost:6000/logs \
 
 ## Configuration
 
-The following constants can be modified in `main.go`:
+Environment variables used by the server:
 
-- `LOG_FILE`: Name of the log file (default: `proxy.log`)
-- `PORT`: Server port (default: `6000`)
+- `TOTP_SECRET`: Required TOTP secret for validating OTPs
+- `LOG_FILE`: Log file path (default: `proxy.log`)
+- `PORT`: Server port (default: `7000`)
+- `ISSUER`: Server/service name (default: `Server`)
+- `ACCOUNT_NAME`: Account identifier (default: `Admin`)
 
 ## Error Handling
 
@@ -187,6 +240,8 @@ All operations are logged to both:
 - Console output
 - `proxy.log` file
 
+By default, `proxy.log` is created in the process's current working directory.
+
 Log entries include:
 
 - Server startup
@@ -204,3 +259,7 @@ Log entries include:
 ## Author
 
 [Aditya](https://adityapunmiya.com)
+
+## Deployment
+
+Deployment and CI/CD are environment-specific. Use the build commands above within your own pipeline or tooling appropriate for your infrastructure.

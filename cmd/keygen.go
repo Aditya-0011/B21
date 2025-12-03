@@ -15,11 +15,6 @@ import (
 )
 
 const (
-	issuer      = "Server"
-	accountName = "John Doe"
-)
-
-const (
 	colorReset   = "\033[0m"
 	colorRed     = "\033[31m"
 	colorGreen   = "\033[32m"
@@ -30,6 +25,17 @@ const (
 )
 
 func main() {
+
+	issuer := os.Getenv("ISSUER")
+	if issuer == "" {
+		issuer = "Server"
+	}
+
+	accountName := os.Getenv("ACCOUNT_NAME")
+	if accountName == "" {
+		accountName = "Admin"
+	}
+
 	imgPath, key, err := generate(issuer, accountName)
 	if err != nil {
 		fmt.Println(colorReset+bold+"\nError generating TOTP key:"+colorReset+colorRed, err)

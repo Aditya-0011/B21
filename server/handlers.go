@@ -23,6 +23,7 @@ type logRequest struct {
 type Controller struct {
 	Log     *utils.Logger
 	LogFile string
+	Secret string
 }
 
 func (c *Controller) GetData(w http.ResponseWriter, r *http.Request) {
@@ -39,13 +40,8 @@ func (c *Controller) GetData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	allowed, err := (&totp.Auth{OTP: req.OTP}).Validate()
+	allowed, err := (&totp.Auth{OTP: req.OTP, Secret: c.Secret}).Validate()
 	if err != nil || !allowed {
-		if err.Error() == "Secret not found" {
-			c.Log.Entry("[ERROR] Secret not configured")
-			http.Error(w, "Server error", http.StatusInternalServerError)
-			return
-		}
 		c.Log.Entry(fmt.Sprintf("[AUTH FAIL] Download attempt for %s from IP %s", req.URL, r.RemoteAddr))
 		http.Error(w, "Invalid OTP", http.StatusForbidden)
 		return
@@ -87,7 +83,7 @@ func (c *Controller) GetLogs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	allowed, err := (&totp.Auth{OTP: req.OTP}).Validate()
+	allowed, err := (&totp.Auth{OTP: req.OTP, Secret: c.Secret}).Validate()
 	if err != nil || !allowed {
 		if err.Error() == "Secret not found" {
 			c.Log.Entry("[ERROR] Secret not configured")
