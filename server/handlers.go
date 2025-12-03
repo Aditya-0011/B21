@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"proxy-server/totp"
 	"proxy-server/utils"
+	"strings"
 	"time"
 )
 
@@ -23,12 +25,27 @@ type logRequest struct {
 type Controller struct {
 	Log     *utils.Logger
 	LogFile string
-	Secret string
+	Secret  string
+}
+
+func getClientIP(r *http.Request) string {
+	forwarded := r.Header.Get("X-Forwarded-For")
+	if forwarded != "" {
+		ips := strings.Split(forwarded, ",")
+		return strings.TrimSpace(ips[0])
+	}
+	ip, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
+	}
+	return ip
 }
 
 func (c *Controller) GetData(w http.ResponseWriter, r *http.Request) {
+	realIP := getClientIP(r)
+
 	if r.Method != http.MethodPost {
-		c.Log.Entry(fmt.Sprintf("[INVALID METHOD] %s request from IP %s", r.Method, r.RemoteAddr))
+		c.Log.Entry(fmt.Sprintf("[INVALID METHOD] %s request from IP %s", r.Method, realIP))
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
@@ -42,12 +59,12 @@ func (c *Controller) GetData(w http.ResponseWriter, r *http.Request) {
 
 	allowed, err := (&totp.Auth{OTP: req.OTP, Secret: c.Secret}).Validate()
 	if err != nil || !allowed {
-		c.Log.Entry(fmt.Sprintf("[AUTH FAIL] Download attempt for %s from IP %s", req.URL, r.RemoteAddr))
+		c.Log.Entry(fmt.Sprintf("[AUTH FAIL] Download attempt for %s from IP %s", req.URL, realIP))
 		http.Error(w, "Invalid OTP", http.StatusForbidden)
 		return
 	}
 
-	c.Log.Entry(fmt.Sprintf("[PROXY] Starting download: %s (IP: %s)", req.URL, r.RemoteAddr))
+	c.Log.Entry(fmt.Sprintf("[PROXY] Starting download: %s (IP: %s)", req.URL, realIP))
 
 	resp, err := http.Get(req.URL)
 	if err != nil {
@@ -70,8 +87,10 @@ func (c *Controller) GetData(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Controller) GetLogs(w http.ResponseWriter, r *http.Request) {
+	realIP := getClientIP(r)
+
 	if r.Method != http.MethodPost {
-		c.Log.Entry(fmt.Sprintf("[INVALID METHOD] %s request from IP %s", r.Method, r.RemoteAddr))
+		c.Log.Entry(fmt.Sprintf("[INVALID METHOD] %s request from IP %s", r.Method, realIP))
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
@@ -90,7 +109,7 @@ func (c *Controller) GetLogs(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Server error", http.StatusInternalServerError)
 			return
 		}
-		c.Log.Entry(fmt.Sprintf("[AUTH FAIL] Log access attempt from IP %s", r.RemoteAddr))
+		c.Log.Entry(fmt.Sprintf("[AUTH FAIL] Log access attempt from IP %s", realIP))
 		http.Error(w, "Invalid OTP", http.StatusForbidden)
 		return
 	}
@@ -125,7 +144,7 @@ func (c *Controller) GetLogs(w http.ResponseWriter, r *http.Request) {
 	}
 	defer os.Remove(tempFilename)
 
-	c.Log.Entry(fmt.Sprintf("[ADMIN] Logs exported to IP %s", r.RemoteAddr))
+	c.Log.Entry(fmt.Sprintf("[ADMIN] Logs exported to IP %s", realIP))
 
 	http.ServeFile(w, r, tempFilename)
 }
