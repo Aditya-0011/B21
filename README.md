@@ -185,7 +185,8 @@ If you've built the server binary, run it directly:
 ```bash
 curl -X POST https://example.com/ \
   -H "Content-Type: application/json" \
-  -d '{"url":"https://example-2.com/file.zip","otp":"123456"}'
+  -d '{"url":"https://example-2.com/file.zip","otp":"123456"}' \
+  -o filename.format
 ```
 
 #### 2. Retrieve Server Logs
@@ -210,7 +211,7 @@ curl -X POST https://example.com/ \
 curl -X POST https://example.com/logs \
   -H "Content-Type: application/json" \
   -d '{"otp":"123456"}' \
-  --output logs.txt
+  -o logs.txt
 ```
 
 ## Security
