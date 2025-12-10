@@ -44,10 +44,19 @@ func getClientIP(r *http.Request) string {
 func (c *Controller) GetData(w http.ResponseWriter, r *http.Request) {
 	realIP := getClientIP(r)
 
-	if r.Method != http.MethodPost {
+	if r.Method != http.MethodPost && r.Method != http.MethodGet {
 		c.Log.Entry(fmt.Sprintf("[INVALID METHOD] %s request from IP %s", r.Method, realIP))
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
+	}
+
+	if r.Method == http.MethodGet {
+		now := time.Now().Format(time.RFC3339)
+		c.Log.Entry(fmt.Sprintf("[INFO] Tested connection from %s", realIP))
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+        w.WriteHeader(http.StatusOK)
+        _, _ = w.Write([]byte(now))
+        return
 	}
 
 	var req downloadRequest
