@@ -54,7 +54,7 @@ Unlike standard proxies, B21 does not expose a full internet gateway. Instead, i
 
 ### Prerequisites
 
-- **Go 1.25.3** or higher
+- **Go 1.25.3** or higher (required only for development and building binaries)
 - An authenticator app (Google Authenticator, Authy, 1Password, etc.)
 - Access to a VPS or external server to host the relay (optional for production)
 
@@ -227,8 +227,8 @@ curl -X POST https://example.com/ \
 # Download with rate limiting (recommended for stealth)
 curl --limit-rate 2M -X POST https://example.com/ \
   -H "Content-Type: application/json" \
-  -d '{"url":"https://example-cdn.com/large-file.iso","otp":"123456"}' \
-  -o large-file.iso
+  -d '{"url":"https://example-cdn.com/file.zip","otp":"123456"}' \
+  -o large-file.zip
 ```
 
 **cURL Options Explained:**
@@ -400,15 +400,6 @@ The log file contains timestamped entries including:
 4. **Minimal Attack Surface** - Only POST/GET requests are accepted. No query parameters or complex headers are parsed.
 5. **IP Logging** - Real client IPs are extracted via `X-Forwarded-For` header (supports reverse proxy scenarios).
 
-### Security Best Practices
-
-- 🔒 Store `TOTP_SECRET` in environment variables, never in code
-- 🔐 Use HTTPS/TLS in production (reverse proxy with Let's Encrypt)
-- 🚫 Never commit secrets to version control
-- 📝 Regularly audit logs for suspicious activity
-- 🔄 Rotate TOTP secrets periodically
-- 🔥 Use a firewall to restrict access to known IPs
-
 ---
 
 ## ⚠️ Error Handling
@@ -418,12 +409,9 @@ The server handles various error scenarios with appropriate HTTP status codes:
 | Scenario                   | HTTP Status | Response                 | Logged As          |
 | :------------------------- | :---------- | :----------------------- | :----------------- |
 | Invalid HTTP method        | `405`       | "Method not allowed"     | `[INVALID METHOD]` |
-| Malformed JSON in body     | `400`       | "Bad request"            | N/A                |
 | Invalid or expired OTP     | `403`       | "Invalid OTP"            | `[AUTH FAIL]`      |
 | Missing TOTP secret        | `500`       | "Server error"           | `[ERROR]`          |
 | Unable to reach target URL | `502`       | "Failed to reach target" | `[ERROR]`          |
-| Log file missing           | `500`       | "Log file missing"       | N/A                |
-| File system errors         | `500`       | "Server Disk Error"      | N/A                |
 
 ---
 
