@@ -54,9 +54,9 @@ func (c *Controller) GetData(w http.ResponseWriter, r *http.Request) {
 		now := time.Now().Format(time.RFC3339)
 		c.Log.Entry(fmt.Sprintf("[INFO] Tested connection from %s", realIP))
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-        w.WriteHeader(http.StatusOK)
-        _, _ = w.Write([]byte(now))
-        return
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(now))
+		return
 	}
 
 	var req downloadRequest
@@ -75,10 +75,21 @@ func (c *Controller) GetData(w http.ResponseWriter, r *http.Request) {
 
 	c.Log.Entry(fmt.Sprintf("[PROXY] Starting download: %s (IP: %s)", req.URL, realIP))
 
-	resp, err := http.Get(req.URL)
+	upstreamReq, _ := http.NewRequest("GET", req.URL, nil)
+
+	if rangeHeader := r.Header.Get("Range"); rangeHeader != "" {
+		upstreamReq.Header.Set("Range", rangeHeader)
+		c.Log.Entry(fmt.Sprintf("[PROXY] Resuming download for %s (Range: %s)", req.URL, rangeHeader))
+	} else {
+		c.Log.Entry(fmt.Sprintf("[PROXY] Starting download: %s", req.URL))
+	}
+
+	client := &http.Client{}
+
+	resp, err := client.Do(upstreamReq)
 	if err != nil {
 		c.Log.Entry(fmt.Sprintf("[ERROR] Upstream failure: %v", err))
-		http.Error(w, "Failed to reach target", http.StatusBadGateway)
+		http.Error(w, "Failed to reach target", 502)
 		return
 	}
 	defer resp.Body.Close()
@@ -86,6 +97,12 @@ func (c *Controller) GetData(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Content-Length", resp.Header.Get("Content-Length"))
 	w.Header().Set("Content-Disposition", "attachment; filename=resource.dat")
+	w.Header().Set("Accept-Ranges", "bytes")
+
+	if resp.StatusCode == 206 {
+		w.Header().Set("Content-Range", resp.Header.Get("Content-Range"))
+		w.WriteHeader(http.StatusPartialContent)
+	}
 
 	n, err := io.Copy(w, resp.Body)
 	if err != nil {
